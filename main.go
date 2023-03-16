@@ -45,21 +45,21 @@ func main() {
 
 	for _, t := range *task {
 
-		var data *[]map[string]string
+		// 자료구조 : [고루틴별][라인수별]map[태그별]실데이터
+		var thread_data *[][]map[string]string
 
 		if t.Task_Parser.Input.Type == "file" {
 			input := Input.New_Input_Text()
-			data = input.Load(&t.Task_Parser.Input)
+			thread_data = input.Load(&t.Task_Parser.Input)
 		}
 
-		// parsing := Parsing.New_Parser_regex()
-		// parsing.Parsing()
+		if thread_data != nil {
+			if t.Task_Parser.Output.Type == "file" {
+				output := Output.New_Output_Text()
+				output.DataOut(&t.Task_Parser.Output, thread_data)
+			}
 
-		if t.Task_Parser.Output.Type == "file" {
-			output := Output.New_Output_Text()
-			output.DataOut(&t.Task_Parser.Output, data)
+			*thread_data = nil
 		}
-
-		*data = nil
 	}
 }
