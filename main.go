@@ -12,8 +12,8 @@ import (
 
 type Task_Confg struct {
 	Task_Parser struct {
-		Input  Input.Task_Input   `yaml:"input"`
-		Output Output.Task_Output `yaml:"output"`
+		Input  Input.Task_Input     `yaml:"input"`
+		Output []Output.Task_Output `yaml:"output"`
 	} `yaml:"task"`
 }
 
@@ -58,15 +58,20 @@ func main() {
 
 		// 결과 출력
 		if thread_data != nil {
-			var output Output.Output
-			if t.Task_Parser.Output.Type == "file" {
-				output = Output.New_Output_Text()
-			} else if t.Task_Parser.Output.Type == "ftp" {
-				output = Output.New_Output_Ftp()
-			}
+			for i := range t.Task_Parser.Output {
+				out := t.Task_Parser.Output[i]
+				var output Output.Output
+				if out.Type == "file" {
+					output = Output.New_Output_Text()
+				} else if out.Type == "ftp" {
+					output = Output.New_Output_Ftp()
+				} else if out.Type == "sftp" {
+					output = Output.New_Output_sFtp()
+				}
 
-			if output != nil {
-				output.DataOut(&t.Task_Parser.Output, thread_data)
+				if output != nil {
+					output.DataOut(&out, thread_data)
+				}
 			}
 
 			*thread_data = nil
