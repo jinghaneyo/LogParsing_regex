@@ -1,3 +1,6 @@
+# 로그 기록 시 콘솔에도 출력을 할것인지 여부
+log_console_print : true
+
 # 정규식 설장 파일 경로 지정
 file_regex : config.praw
 
@@ -7,23 +10,23 @@ work_thread : 200
 # 파싱할 필드 지정이며, 
 # 첫번째 키는 사용자 지정 이름이며, 
 # 두번째 값은 file 에서 지정한 정규식 설정의 라인 수를 의미한다 
-field_tag : 
-        0 : ${frame_index} 
-        1 : ${src_ip} 
-        2 : ${dst_ip}
-        3 : ${nf:version}
-        4 : ${nf:sysuptime}
-        5 : ${nf:flowset}
-        6 : ${nf:src_ip}
-        7 : ${nf:dst_ip}
-        8 : ${nf:protocol}
-        9 : ${nf:src_port}
-        10 : ${nf:dst_port} 
-        11 : ${nf:if_in}
-        12 : ${nf:if_out}
-        13 : ${nf:tcp_flags} 
-        14 : ${nf:bytes}
-        15 : ${nf:packets} 
+file_field_tag : 
+        ${frame_index} : 0
+        ${src_ip} : 1
+        ${dst_ip} : 2 
+        ${nf:version} : 3
+        ${nf:sysuptime} : 4
+        ${nf:flowset} : 5
+        ${nf:src_ip} : 6
+        ${nf:dst_ip} : 7
+        ${nf:protocol} : 8
+        ${nf:src_port} : 9
+        ${nf:dst_port} : 10
+        ${nf:if_in} : 11
+        ${nf:if_out} : 12
+        ${nf:tcp_flags}  : 13
+        ${nf:bytes} : 14
+        ${nf:packets} : 15
 
 # 읽어 들일 파일명 경로
 in_file : test.txt
