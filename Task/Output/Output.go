@@ -11,5 +11,5 @@ type Task_Output struct {
 }
 
 type Output interface {
-	DataOut(_task *Task_Output, _data *[]map[string]string) bool
+	DataOut(_task *Task_Output, _data *[][]map[string]string)
 }

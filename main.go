@@ -47,6 +47,7 @@ func main() {
 
 	for _, t := range *task {
 
+		// 추출 로드 및 파싱
 		// 자료구조 : [고루틴별][라인수별]map[태그별]실데이터
 		var thread_data *[][]map[string]string
 
@@ -55,9 +56,16 @@ func main() {
 			thread_data = input.Load(&t.Task_Parser.Input)
 		}
 
+		// 결과 출력
 		if thread_data != nil {
+			var output Output.Output
 			if t.Task_Parser.Output.Type == "file" {
-				output := Output.New_Output_Text()
+				output = Output.New_Output_Text()
+			} else if t.Task_Parser.Output.Type == "ftp" {
+				output = Output.New_Output_Ftp()
+			}
+
+			if output != nil {
 				output.DataOut(&t.Task_Parser.Output, thread_data)
 			}
 
