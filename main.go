@@ -41,7 +41,9 @@ func main() {
 	if task == nil {
 		return
 	}
-	Task.SetLog_EnableConsole(true)
+
+	Task.GetInst().Enable_Console(false)
+	Task.GetInst().Enable_LogDate(false)
 
 	for _, t := range *task {
 

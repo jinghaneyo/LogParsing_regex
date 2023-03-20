@@ -42,14 +42,16 @@ func (This *Input_Text) Load(_task *Task_Input) *[][]map[string]string {
 	thread_data := make([][]map[string]string, ThreadCount)
 
 	var nStart int64
+	nStart = 0
 	for i := 0; i < ThreadCount; i++ {
+
+		fmt.Printf("[THREAD ID = %d] Start = %d\n", i, nStart)
 		wg.Add(1)
-		go This.Extracter(&wg, _task, nStart, WorkSize, &thread_data[i])
-		nStart += WorkSize
+		go This.Extracter(&wg, i, _task, nStart, WorkSize, &thread_data[i])
+		nStart += WorkSize + 1
 	}
 
 	wg.Wait()
-
 	return &thread_data
 	//*/
 
@@ -63,7 +65,6 @@ func (This *Input_Text) Load(_task *Task_Input) *[][]map[string]string {
 
 		thread_data := make([][]map[string]string, 0)
 		var rows []map[string]string
-		thread_data = append(thread_data, rows)
 
 		var field map[string]string
 
@@ -74,7 +75,7 @@ func (This *Input_Text) Load(_task *Task_Input) *[][]map[string]string {
 				if _task.File.Start_tag == tag {
 					// 필드 셋이 새로 시작을 하니 이전 셋은 데이터 배열에 넣도록 한다
 					if field != nil {
-						thread_data[0] = append(thread_data[0], field)
+						rows = append(rows, field)
 					}
 					// 필드 셋을 새로 만들어주자
 					field = make(map[string]string, 0)
@@ -89,12 +90,14 @@ func (This *Input_Text) Load(_task *Task_Input) *[][]map[string]string {
 			return nil
 		}
 
+		thread_data = append(thread_data, rows)
 		return &thread_data
 		//*/
 }
 
 func (This *Input_Text) Extracter(
 	_wg *sync.WaitGroup,
+	_thread_num int,
 	_task *Task_Input,
 	_nStart int64,
 	_nSize int64,
@@ -102,7 +105,7 @@ func (This *Input_Text) Extracter(
 
 	defer _wg.Done()
 
-	f, err := os.OpenFile(_task.File.Path, os.O_RDONLY, os.ModePerm)
+	f, err := os.OpenFile(_task.File.Path, os.O_RDONLY, 644)
 	if err != nil {
 		log.Fatalf("open file error: %v", err)
 		return
@@ -115,101 +118,97 @@ func (This *Input_Text) Extracter(
 	var nTotal_Bytes int64
 
 	// 파일 포인터 위치 읽어들여야할 위치로 이동
-	f.Seek(_nStart, os.SEEK_SET)
+	f.Seek(_nStart, 0)
 
+	// 일단 2000 읽어 들이자
 	nRead_Len := 2000
 	if nRead_Len > int(_nSize) {
 		nRead_Len = int(_nSize)
 	}
 
+	var nRemaning int64
 	last_buf := ""
-	for nTotal_Bytes < _nSize {
+	for {
 
-		// 일단 2000 읽어 들이자
+		// 고루틴 한개가 읽어들여야할 바이트 수만큼 읽어들이기 위해서
+		nRemaning = _nSize - nTotal_Bytes
+		if nRemaning < int64(nRead_Len) {
+			nRead_Len = int(nRemaning)
+		}
+		if nRead_Len < 1 {
+			nRead_Len = 4000
+		}
+
 		line_bytes := make([]byte, nRead_Len)
-		f.Read(line_bytes)
-		line_string := string(line_bytes)
+		_, err := f.Read(line_bytes)
+		if err != nil {
+			*_dataOut = data
+			return
+		}
 
+		line_string := string(line_bytes)
 		lines := strings.Split(line_string, "\n")
 
 		// 한줄씩 파싱(정규식)을 한다
 		for i := range lines {
 
-			nTotal_Bytes += int64(len(lines[i]))
-			nTotal_Bytes += 1 // 개행도 더해준다
-
 			// _nStart 가 0보다 크면 라인의 첫번째 글자가 아니라 라인의 중간이란 애기이므로
-			// 다음 라인부터 처리하도록 한다
+			// 이전 턴에서의 마지막 라인하고 합치자
 			if i == 0 {
-				if _nStart > 0 {
-					if len(last_buf) > 0 {
-						// 마지막이 캐리지 리턴이면 제거
-						if last_buf[len(last_buf)-1] == '\r' {
-							lines[i] = last_buf[0:len(last_buf)-2] + lines[i]
-						} else {
-							lines[i] = last_buf + lines[i]
-						}
-					}
+				if len(last_buf) > 0 {
+					lines[i] = last_buf + lines[i]
 				}
 			}
 
 			// 마지막 라인은 완전한 한줄이 아니므로 임시변수에 저장한 후에
 			// 다음턴 첫번째랑 합쳐서 파싱하도록 한다
 			if i == len(lines)-1 {
-				//last_buf = lines[i]
+				last_buf = lines[i]
 				break
+			} else {
+				nTotal_Bytes += int64(len(lines[i]))
+				nTotal_Bytes += 1 // (\n)개행도 더해준다
 			}
 
 			ret, tag, value := This.Parsing(_task, lines[i])
-			if ret == bool(true) {
-				if _task.File.Start_tag == tag {
-					// 필드 셋이 새로 시작을 하니 이전 셋은 데이터 배열에 넣도록 한다
-					if field != nil {
-						data = append(data, field)
-					}
-					// 필드 셋을 새로 만들어주자
-					field = make(map[string]string, 0)
-				}
-				if field != nil {
-					field[tag] = value
-				}
-			}
 
-			if nTotal_Bytes > _nSize {
-				break
+			if nTotal_Bytes <= _nSize {
+
+				if ret == bool(true) {
+					// 필드 셋이 새로 시작
+					if _task.File.Start_tag == tag {
+						// 필드 셋이 새로 시작을 하니 이전 셋은 데이터 배열에 넣도록 한다
+						if field != nil {
+							data = append(data, field)
+						}
+
+						// 필드 셋을 새로 만들어주자
+						field = make(map[string]string, 0)
+					}
+
+					if field != nil {
+						field[tag] = value
+					}
+				}
+			} else {
+
+				if ret == bool(true) {
+					if _task.File.Start_tag == tag {
+						if field != nil {
+							data = append(data, field)
+						}
+
+						*_dataOut = data
+						return
+					}
+
+					if field != nil {
+						field[tag] = value
+					}
+				}
 			}
 		}
 	}
-
-	// sc := bufio.NewScanner(f)
-	// for sc.Scan() {
-
-	// 	line := sc.Text()
-	// 	nTotal_Bytes += int64(len(line))
-
-	// 	if _nStart < nTotal_Bytes {
-	// 		ret, tag, value := This.Parsing(_task, line)
-	// 		if ret == bool(true) {
-	// 			if _task.File.Start_tag == tag {
-	// 				// 필드 셋이 새로 시작을 하니 이전 셋은 데이터 배열에 넣도록 한다
-	// 				if field != nil {
-	// 					data = append(data, field)
-	// 				}
-	// 				// 필드 셋을 새로 만들어주자
-	// 				field = make(map[string]string, 0)
-	// 			}
-	// 			if field != nil {
-	// 				field[tag] = value
-	// 			}
-	// 		}
-	// 	}
-	// }
-	// if err := sc.Err(); err != nil {
-	// 	log.Fatalf("scan file error: %v", err)
-	// 	return
-	// }
-
-	*_dataOut = data
 }
 
 func (This *Input_Text) Parsing(_task *Task_Input, _line string) (bool, string, string) {

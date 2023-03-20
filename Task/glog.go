@@ -3,21 +3,34 @@ package Task
 import (
 	"fmt"
 	"os"
-	"sync/atomic"
 	"time"
 )
 
-var g_EnableConsole int32
-
-func SetLog_EnableConsole(_Enable bool) {
-	if _Enable == bool(true) {
-		atomic.StoreInt32(&g_EnableConsole, 1)
-	} else {
-		atomic.StoreInt32(&g_EnableConsole, 0)
-	}
+type Log struct {
+	bEnableConsole bool
+	bEnableLogDate bool
 }
 
-func WriteLog(_filename string, _format string, _msg ...interface{}) {
+var g_Instance *Log
+
+func GetInst() *Log {
+	if g_Instance == nil {
+		g_Instance = new(Log)
+		g_Instance.bEnableConsole = true
+		g_Instance.bEnableLogDate = true
+	}
+	return g_Instance
+}
+
+func (This *Log) Enable_Console(_Enable bool) {
+	This.bEnableConsole = _Enable
+}
+
+func (This *Log) Enable_LogDate(_Enable bool) {
+	This.bEnableLogDate = _Enable
+}
+
+func (This *Log) WriteLog(_filename string, _format string, _msg ...interface{}) {
 
 	t := time.Now()
 	rst := t.Format("2006-01-02 15:04:05")
@@ -32,21 +45,24 @@ func WriteLog(_filename string, _format string, _msg ...interface{}) {
 		return
 	}
 
-	// call := CallFunc()
-	// if len(call) > 20 {
-	// 	call = fmt.Sprintf("[%s][%20s] ", rst, call[len(call)-20:])
-	// } else {
-	// 	call = fmt.Sprintf("[%s][%20s] ", rst, call)
-	// }
-	call := fmt.Sprintf("[%s]", rst)
-
 	msg := fmt.Sprintf(_format, _msg...)
 	if 0 < len(msg) {
-		if g_EnableConsole == 1 {
-			fmt.Printf("%s%s\n", call, msg)
+
+		if This.bEnableLogDate == bool(true) {
+			call := fmt.Sprintf("[%s]", rst)
+			_, err = fmt.Fprint(logfile, call, msg, "\n")
+
+			if This.bEnableConsole == bool(true) {
+				fmt.Printf("%s%s\n", call, msg)
+			}
+		} else {
+			_, err = fmt.Fprint(logfile, msg, "\n")
+
+			if This.bEnableConsole == bool(true) {
+				fmt.Printf("%s\n", msg)
+			}
 		}
 
-		_, err = fmt.Fprint(logfile, call, msg, "\n")
 		if err != nil {
 			logfile.Close()
 			return
