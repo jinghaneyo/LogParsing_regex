@@ -1,41 +1,9 @@
 # 로그 기록 시 콘솔에도 출력을 할것인지 여부
 log_console_print : true
 
-# 정규식 설장 파일 경로 지정
-file_regex : config.praw
-
 # 작업 스레드 개수 지정(고루틴)
-work_thread : 200
+work_thread : 10
 
-# 파싱할 필드 지정이며, 
-# 첫번째 키는 사용자 지정 이름이며, 
-# 두번째 값은 file 에서 지정한 정규식 설정의 라인 수를 의미한다 
-file_field_tag : 
-        ${frame_index} : 0
-        ${src_ip} : 1
-        ${dst_ip} : 2 
-        ${nf:version} : 3
-        ${nf:sysuptime} : 4
-        ${nf:flowset} : 5
-        ${nf:src_ip} : 6
-        ${nf:dst_ip} : 7
-        ${nf:protocol} : 8
-        ${nf:src_port} : 9
-        ${nf:dst_port} : 10
-        ${nf:if_in} : 11
-        ${nf:if_out} : 12
-        ${nf:tcp_flags}  : 13
-        ${nf:bytes} : 14
-        ${nf:packets} : 15
-
-# 읽어 들일 파일명 경로
-in_file : test.txt
-# 결과 저장할 파일명 경로
-out_file : result.txt
-
-# 저장 시 지정한 필드 형태로 라인별 저장할 포맷을 지정
-#format : ${frame_index}-${nf:flowset},${src_ip}|${nf:sysuptime}Z-${nf:src_ip},${nf:dst_ip},${nf:src_port},${nf:dst_port},${nf:protocol},${nf:tcp_flags},${nf:if_in},${nf:if_out},${nf:bytes},${nf:packets}
-format : ${src_ip}|Z-${nf:src_ip},${nf:dst_ip},${nf:src_port},${nf:dst_port},${nf:protocol},${nf:tcp_flags},${nf:if_in},${nf:if_out},${nf:bytes},${nf:packets},0,0
-
-# milisecond
-line_task_sleep : 10
+# 위에 작업 스레드 형태로 동작 시 많은 리소스를 잡아 먹는다.
+# 따라서 작업 CPU를 낮추기 위한 라인별 추출 슬립 설정이다 
+task_line_sleep : 1

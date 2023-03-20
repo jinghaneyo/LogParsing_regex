@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 )
 
 type Input_Text struct {
@@ -44,8 +45,6 @@ func (This *Input_Text) Load(_task *Task_Input) *[][]map[string]string {
 	var nStart int64
 	nStart = 0
 	for i := 0; i < ThreadCount; i++ {
-
-		fmt.Printf("[THREAD ID = %d] Start = %d\n", i, nStart)
 		wg.Add(1)
 		go This.Extracter(&wg, i, _task, nStart, WorkSize, &thread_data[i])
 		nStart += WorkSize + 1
@@ -53,46 +52,6 @@ func (This *Input_Text) Load(_task *Task_Input) *[][]map[string]string {
 
 	wg.Wait()
 	return &thread_data
-	//*/
-
-	/*
-		f, err := os.OpenFile(_task.File.Path, os.O_RDONLY, os.ModePerm)
-		if err != nil {
-			log.Fatalf("open file error: %v", err)
-			return nil
-		}
-		defer f.Close()
-
-		thread_data := make([][]map[string]string, 0)
-		var rows []map[string]string
-
-		var field map[string]string
-
-		sc := bufio.NewScanner(f)
-		for sc.Scan() {
-			ret, tag, value := This.Parsing(_task, sc.Text())
-			if ret == bool(true) {
-				if _task.File.Start_tag == tag {
-					// 필드 셋이 새로 시작을 하니 이전 셋은 데이터 배열에 넣도록 한다
-					if field != nil {
-						rows = append(rows, field)
-					}
-					// 필드 셋을 새로 만들어주자
-					field = make(map[string]string, 0)
-				}
-				if field != nil {
-					field[tag] = value
-				}
-			}
-		}
-		if err := sc.Err(); err != nil {
-			log.Fatalf("scan file error: %v", err)
-			return nil
-		}
-
-		thread_data = append(thread_data, rows)
-		return &thread_data
-		//*/
 }
 
 func (This *Input_Text) Extracter(
@@ -207,6 +166,8 @@ func (This *Input_Text) Extracter(
 					}
 				}
 			}
+
+			time.Sleep(1 * time.Microsecond)
 		}
 	}
 }
