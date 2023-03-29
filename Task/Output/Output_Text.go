@@ -1,6 +1,7 @@
 package Output
 
 import (
+	"LogParsing_regex/Task"
 	"fmt"
 	"os"
 	"strings"
@@ -23,7 +24,7 @@ func (This *Output_Text) DataOut(_task *Task_Output, _thread_data *[][]map[strin
 
 	f, err := os.Create(_task.File.Path)
 	if err != nil {
-		fmt.Printf("[Output_Text] DataOut >> Err = %v", err)
+		Task.LogInst().WriteLog("OUTPUT_TEXT", "[FAIL] Open file is fail >> ERR = %s | File = %s", err, _task.File.Path)
 		return
 	}
 
@@ -37,9 +38,9 @@ func (This *Output_Text) DataOut(_task *Task_Output, _thread_data *[][]map[strin
 				format = strings.ReplaceAll(format, k, v)
 			}
 
-			n3, err := f.WriteString(format)
+			_, err := f.WriteString(format)
 			if err != nil {
-				fmt.Printf("[Output_Text] WriteString >> Err = %v, %v", err, n3)
+				Task.LogInst().WriteLog("OUTPUT_TEXT", "[FAIL] WriteString is fail >> ERR = %s | File = %s", err, _task.File.Path)
 				return
 			}
 			f.WriteString("\n")

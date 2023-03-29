@@ -1,8 +1,8 @@
 package Output
 
 import (
+	"LogParsing_regex/Task"
 	"bufio"
-	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -20,20 +20,20 @@ func New_Output_Ftp() *Output_Ftp {
 }
 
 func (This *Output_Ftp) Init() {
-	fmt.Println("call Output_Ftp Init")
+	Task.LogInst().WriteLog("OUTPUT_FTP", "call Output_Ftp Init")
 }
 
 func (This *Output_Ftp) DataOut(_task *Task_Output, _thread_data *[][]map[string]string) {
 
 	conn, err := ftp.Dial(_task.Ftp.Server+":"+strconv.Itoa(_task.Ftp.Port), ftp.DialWithTimeout(time.Duration(_task.Ftp.Connect_timeout*int(time.Second))))
 	if err != nil {
-		fmt.Printf("[Output_Ftp] Connect >> Err = %v", err)
+		Task.LogInst().WriteLog("OUTPUT_FTP", "[FAIL] Connect >> Err = %v", err)
 		return
 	}
 
 	err = conn.Login(_task.Ftp.Id, _task.Ftp.Pwd)
 	if err != nil {
-		fmt.Printf("[Output_Ftp] Login >> Err = %v", err)
+		Task.LogInst().WriteLog("OUTPUT_FTP", "[FAIL] Login >> Err = %v", err)
 		return
 	}
 
@@ -43,14 +43,16 @@ func (This *Output_Ftp) DataOut(_task *Task_Output, _thread_data *[][]map[string
 		os.FileMode(0644),
 	)
 	if err != nil {
-		fmt.Printf("[Output_Ftp] File Open Fail(%s) >> Err = %v", _task.Ftp.LocalPath, err)
+		Task.LogInst().WriteLog("OUTPUT_FTP", "[FAIL] File Open Fail(%s) >> Err = %v", _task.Ftp.LocalPath, err)
 		return
 	}
 
 	r := bufio.NewReader(file)
 	err = conn.Stor(_task.Ftp.RemotePath, r)
 	if err != nil {
-		fmt.Printf("[Output_Ftp] Upload Fail(%s) >> Err = %v", _task.Ftp.LocalPath, err)
+		Task.LogInst().WriteLog("OUTPUT_FTP", "[FAIL] Upload Fail(%s) >> Err = %v", _task.Ftp.LocalPath, err)
 		return
+	} else {
+		Task.LogInst().WriteLog("OUTPUT_FTP", "[SUCC] Upload succ(%s) >> Err = %v", _task.Ftp.LocalPath, err)
 	}
 }

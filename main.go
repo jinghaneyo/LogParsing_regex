@@ -6,6 +6,8 @@ import (
 	"LogParsing_regex/Task/Output"
 	"io/ioutil"
 	"log"
+	"regexp"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 )
@@ -32,6 +34,48 @@ func Load_Task() *[]Task_Confg {
 		return nil
 	}
 
+	// 쿼리일 경우 bulk insert 가능 여부 확인
+	for i := range *task {
+		for j := range (*task)[i].Task_Parser.Output {
+			out := &(*task)[i].Task_Parser.Output[j]
+
+			// bulk insert 가능 여부 판단
+			CanBulkInsert := make([]bool, 0)
+
+			// bulk insert 의 value 추출 구문
+			Value_sql := make([]string, 0)
+			// bulk insert 의 insert 추출 구문
+			Insert_sql := make([]string, 0)
+
+			for index := range out.Db.Sql.Data {
+
+				out.Db.Sql.Data[index] = strings.Trim(out.Db.Sql.Data[index], " ")
+
+				// 마지막에 ; 있으면 제거
+				if out.Db.Sql.Data[index][len(out.Db.Sql.Data[index])-1] == ';' {
+					out.Db.Sql.Data[index] = out.Db.Sql.Data[index][0 : len(out.Db.Sql.Data[index])-1]
+				}
+
+				r, _ := regexp.Compile(`(INSERT[\s]+INTO[\s]+.+)VALUES[\s]*(\(.+\))`)
+				ret := r.FindStringSubmatch(out.Db.Sql.Data[index])
+				if len(ret) > 2 {
+					if strings.EqualFold(out.Db.Sql.Data[index], "DUPLICATE KEY") == bool(false) {
+						CanBulkInsert = append(CanBulkInsert, true)
+
+						Insert_sql = append(Value_sql, ret[1])
+						Value_sql = append(Value_sql, ret[2])
+					} else {
+						CanBulkInsert = append(CanBulkInsert, false)
+					}
+				}
+			}
+
+			out.Db.Sql.CanBulkInsert = CanBulkInsert
+			out.Db.Sql.Insert_Sql = Insert_sql
+			out.Db.Sql.Values_Sql = Value_sql
+		}
+	}
+
 	return task
 }
 
@@ -42,8 +86,8 @@ func main() {
 		return
 	}
 
-	Task.GetInst().Enable_Console(false)
-	Task.GetInst().Enable_LogDate(false)
+	Task.LogInst().Enable_Console(false)
+	Task.LogInst().Enable_LogDate(false)
 
 	for _, t := range *task {
 
@@ -67,6 +111,10 @@ func main() {
 					output = Output.New_Output_Ftp()
 				} else if out.Type == "sftp" {
 					output = Output.New_Output_sFtp()
+				} else if out.Type == "db" {
+					output = Output.New_Output_Database()
+				} else if out.Type == "url" {
+					output = Output.New_Output_URL()
 				}
 
 				if output != nil {

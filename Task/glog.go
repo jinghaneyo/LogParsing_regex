@@ -13,7 +13,7 @@ type Log struct {
 
 var g_Instance *Log
 
-func GetInst() *Log {
+func LogInst() *Log {
 	if g_Instance == nil {
 		g_Instance = new(Log)
 		g_Instance.bEnableConsole = true

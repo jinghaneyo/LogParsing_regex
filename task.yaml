@@ -4,6 +4,15 @@
       type : file
       file :
         path : "D:/01_Project/golang/src/golang/LogParsing_regex/netflow_sample.txt"
+        # regex > 정규식을 이용하여 추출 
+        # split > 한줄에 대해 특정 단어를 기준으로 자르기 
+        extract_type : regex
+        # 1_in_line > 아래 추출할 태그가 한줄에 1개만 존재할 경우 
+        # all_in_line > 아래 추출할 태그들이 한줄에 전부 존재할 경우 
+        # split > 한줄에 특정 단어를 기준으로 스플릿 처리 
+        tag_in_line : "1_in_line"
+        # 한줄에 대해 특정 단어를 기준으로 자르기 위한 단어 지정 
+        split_word : ","
         # 파싱할 필드 지정이며, 
         # 첫번째 키는 사용자 지정 이름이며(태그명), 
         # 두번째 값은 찾을 정규식을 의미한다 
@@ -30,14 +39,42 @@
       #     # 저장 시 지정한 필드 형태로 라인별 저장할 포맷을 지정
       #     format : "${nf:src_ip},${nf:dst_ip},${nf:src_port},${nf:dst_port},${nf:protocol},${nf:tcp_flags},${nf:if_in},${nf:if_out},${nf:bytes},${nf:packets},0,0"
 
-      - type : sftp
-        sftp :
-          server : "x.x.x.x"
-          id : xxx
-          pwd : "xxx"
-          port : 22
-          connect_timeout : 3
-          # 로컬에서 upload할 파읽경로 입력
-          local : "D:/01_Project/golang/src/golang/LogParsing_regex/netflow_output.txt"
-          # 업로드할 경로 파일 입력 
-          remote : "/package/InfraEye/TEST/netflow_output.txt"
+      # - type : sftp
+      #   sftp :
+      #     server : "x.x.x.x"
+      #     id : xxx
+      #     pwd : "xxx"
+      #     port : 22
+      #     connect_timeout : 3
+      #     # 로컬에서 upload할 파읽경로 입력
+      #     local : "D:/01_Project/golang/src/golang/LogParsing_regex/netflow_output.txt"
+      #     # 업로드할 경로 파일 입력 
+      #     remote : "/package/InfraEye/TEST/netflow_output.txt"
+
+      # - type : db
+      #   db :
+      #     kind : mariadb
+      #     odbc : xxx
+      #     database : xxx
+      #     id : xxx
+      #     pwd : "xxx"
+      #     port : 3306
+      #     connect_timeout : 3
+      #     # 1m => mariadb 경우 원래는 1g 기본 설정이나 일단 테스틀 1m 만 하자 
+      #     bulk_insert_max_size : 1048576
+      #     sql :
+      #       # 데이터 쿼리를 실행하기전 실행할 쿼리(한번만 실행, 이전 단계에서 추출한 데이터를 치환하지 않는다)
+      #       # 보통 테이블 데이터를 삭제할때 사용한다 
+      #       first : ""
+      #       # input 단계에서 추출된 데이터 실행 쿼리
+      #       data :
+      #         - " INSERT INTO NMS_DB.TEST_LOG(SRC_IP, DST_IP, PROTOCOL, SRC_PORT, DST_PORT, IF_IN, IF_OUT, TCP_FLAGS, BYTES, PACKETS) 
+      #           VALUES('${nf:src_ip}', '${nf:dst_ip}', '${nf:protocol}', ${nf:src_port}, ${nf:dst_port}, ${nf:if_in}, ${nf:if_out}, ${nf:tcp_flags}, ${nf:bytes}, ${nf:packets});"
+      #       # 데이터 쿼리를 전부 실행 후 실행할 쿼리(한번만 실행, 이전 단계에서 추출한 데이터를 치환하지 않는다)
+      #       # 보통 완료 여부 플래그 업데이트 용으로 사용한다 
+      #       finish : ""
+
+      - type : url
+        url :
+          format :
+            - ""

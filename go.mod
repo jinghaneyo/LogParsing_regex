@@ -5,6 +5,7 @@ go 1.19
 require gopkg.in/yaml.v2 v2.4.0
 
 require (
+	github.com/alexbrainman/odbc v0.0.0-20211220213544-9c9a2e61c5e2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/jlaffaye/ftp v0.1.0 // indirect

@@ -1,8 +1,7 @@
 package Input
 
 import (
-	"fmt"
-	"log"
+	"LogParsing_regex/Task"
 	"os"
 	"regexp"
 	"strings"
@@ -20,7 +19,7 @@ func New_Input_Text() *Input_Text {
 }
 
 func (This *Input_Text) Init() {
-	fmt.Println("call Input_Text Init")
+	Task.LogInst().WriteLog("INPUT", "call Input_Text Init")
 }
 
 func (This *Input_Text) Load(_task *Task_Input) *[][]map[string]string {
@@ -29,7 +28,7 @@ func (This *Input_Text) Load(_task *Task_Input) *[][]map[string]string {
 	// 파일 사이즈를 구해서 동시 진행할 스레드 수에서 작업할 바이트를 구하여 시작점과 종료점을 넘긴다
 	stat, err := os.Stat(_task.File.Path)
 	if err != nil {
-		log.Fatal(err)
+		Task.LogInst().WriteLog("INPUT", "[Load] ERR = %s", err)
 		return nil
 	}
 
@@ -66,7 +65,7 @@ func (This *Input_Text) Extracter(
 
 	f, err := os.OpenFile(_task.File.Path, os.O_RDONLY, 644)
 	if err != nil {
-		log.Fatalf("open file error: %v", err)
+		Task.LogInst().WriteLog("INPUT", "[Extracter] ERR = %s", err)
 		return
 	}
 	defer f.Close()

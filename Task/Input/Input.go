@@ -1,10 +1,16 @@
 package Input
 
+const (
+	Tag_1_in_line = iota
+	Tag_all_in_line
+)
+
 type Input_File struct {
-	Path      string            `yaml:"path"`
-	Regex     string            `yaml:"file_regex"`
-	Start_tag string            `yaml:"start_tag"`
-	Field_tag map[string]string `yaml:"file_field_tag"`
+	Path         string            `yaml:"path"`
+	Extract_type string            `yaml:"extract_type"`
+	Tag_in_Line  string            `yaml:"tag_in_line"`
+	Start_tag    string            `yaml:"start_tag"`
+	Field_tag    map[string]string `yaml:"file_field_tag"`
 }
 
 type Task_Input struct {
