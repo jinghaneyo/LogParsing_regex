@@ -109,8 +109,6 @@ func main() {
 					output = Output.New_Output_Text()
 				} else if out.Type == "ftp" {
 					output = Output.New_Output_Ftp()
-				} else if out.Type == "sftp" {
-					output = Output.New_Output_sFtp()
 				} else if out.Type == "db" {
 					output = Output.New_Output_Database()
 				} else if out.Type == "url" {

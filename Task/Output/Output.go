@@ -6,6 +6,7 @@ type Output_File_Config struct {
 }
 
 type Output_Ftp_Config struct {
+	Sftp            bool   `yaml:"sftp"`
 	Server          string `yaml:"server"`
 	Id              string `yaml:"id"`
 	Pwd             string `yaml:"pwd"`
@@ -40,7 +41,6 @@ type Task_Output struct {
 	Type string             `yaml:"type"`
 	File Output_File_Config `yaml:"file"`
 	Ftp  Output_Ftp_Config  `yaml:"ftp"`
-	Sftp Output_Ftp_Config  `yaml:"sftp"`
 	Db   Output_Db_Config   `yaml:"db"`
 }
 
