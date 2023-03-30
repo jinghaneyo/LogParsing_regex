@@ -38,11 +38,23 @@ type Output_Db_Config struct {
 	} `yaml:"sql"`
 }
 
+type Output_URL_Config struct {
+	Tls    bool              `yaml:"tls"`
+	Method string            `yaml:"method"`
+	Url    string            `yaml:"url"`
+	Header map[string]string `yaml:"header"`
+	Body   struct {
+		Url_encode bool   `yaml:"url_encode"`
+		Data       string `yaml:"data"`
+	} `yaml:"body"`
+}
+
 type Task_Output struct {
 	Type string             `yaml:"type"`
 	File Output_File_Config `yaml:"file"`
 	Ftp  Output_Ftp_Config  `yaml:"ftp"`
 	Db   Output_Db_Config   `yaml:"db"`
+	Url  Output_URL_Config  `yaml:"url"`
 }
 
 type Output interface {
