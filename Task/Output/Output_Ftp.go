@@ -39,13 +39,13 @@ func Upload_Ftp(_task *Task_Output, _thread_data *[][]map[string]string) {
 
 	conn, err := ftp.Dial(_task.Ftp.Server+":"+strconv.Itoa(_task.Ftp.Port), ftp.DialWithTimeout(time.Duration(_task.Ftp.Connect_timeout*int(time.Second))))
 	if err != nil {
-		Task.LogInst().WriteLog("OUTPUT_FTP", "[FAIL] Connect >> Err = %v", err)
+		Task.LogInst().WriteLog("OUTPUT_FTP", "[FAIL][FTP] Connect >> Err = %v", err)
 		return
 	}
 
 	err = conn.Login(_task.Ftp.Id, _task.Ftp.Pwd)
 	if err != nil {
-		Task.LogInst().WriteLog("OUTPUT_FTP", "[FAIL] Login >> Err = %v", err)
+		Task.LogInst().WriteLog("OUTPUT_FTP", "[FAIL][FTP] Login >> Err = %v", err)
 		return
 	}
 
@@ -55,21 +55,27 @@ func Upload_Ftp(_task *Task_Output, _thread_data *[][]map[string]string) {
 		os.FileMode(0644),
 	)
 	if err != nil {
-		Task.LogInst().WriteLog("OUTPUT_FTP", "[FAIL] File Open Fail(%s) >> Err = %v", _task.Ftp.LocalPath, err)
+		Task.LogInst().WriteLog("OUTPUT_FTP", "[FAIL][FTP] File Open Fail(%s) >> Err = %v", _task.Ftp.LocalPath, err)
 		return
 	}
 
 	r := bufio.NewReader(file)
 	err = conn.Stor(_task.Ftp.RemotePath, r)
 	if err != nil {
-		Task.LogInst().WriteLog("OUTPUT_FTP", "[FAIL] Upload Fail(%s) >> Err = %v", _task.Ftp.LocalPath, err)
-		return
+		Task.LogInst().WriteLog("OUTPUT_FTP", "[FAIL][FTP] Upload Fail(%s) >> Err = %v", _task.Ftp.LocalPath, err)
 	} else {
-		Task.LogInst().WriteLog("OUTPUT_FTP", "[SUCC] Upload succ(%s) >> Err = %v", _task.Ftp.LocalPath, err)
+		Task.LogInst().WriteLog("OUTPUT_FTP", "[SUCC][FTP] Upload succ(%s) >> Err = %v", _task.Ftp.LocalPath, err)
 	}
 }
 
 func Upload_sFtp(_task *Task_Output, _thread_data *[][]map[string]string) {
+
+	// 먼저 파일로 저장
+	file := New_Output_Text()
+	ret := file.Write(_task.Ftp.LocalPath, _task.Ftp.Format, "OUTPUT_FTP", _thread_data)
+	if ret == bool(false) {
+		return
+	}
 
 	config := &ssh.ClientConfig{
 		User: _task.Ftp.Id,
@@ -81,31 +87,35 @@ func Upload_sFtp(_task *Task_Output, _thread_data *[][]map[string]string) {
 
 	conn, err := ssh.Dial("tcp", _task.Ftp.Server+":"+strconv.Itoa(_task.Ftp.Port), config)
 	if err != nil {
-		Task.LogInst().WriteLog("OUTPUT_SFTP", "[FAIL] Connect Fail >> ERR = %s", err)
+		Task.LogInst().WriteLog("OUTPUT_FTP", "[FAIL][SFTP] Connect Fail >> ERR = %s", err)
+		return
 	}
 	defer conn.Close()
 
 	client, err := sftp.NewClient(conn)
 	if err != nil {
-		Task.LogInst().WriteLog("OUTPUT_SFTP", "[FAIL] NewClient is Fail to make instance >> ERR = %s", err)
+		Task.LogInst().WriteLog("OUTPUT_FTP", "[FAIL][SFTP] NewClient is Fail to make instance >> ERR = %s", err)
+		return
 	}
 	defer client.Close()
 
 	dstFile, err := client.Create(_task.Ftp.RemotePath)
 	if err != nil {
-		Task.LogInst().WriteLog("OUTPUT_SFTP", "[FAIL] Client is Fail to create >> ERR = %s", err)
+		Task.LogInst().WriteLog("OUTPUT_FTP", "[FAIL][SFTP] Client is Fail to create >> ERR = %s", err)
+		return
 	}
 	defer dstFile.Close()
 
 	srcFile, err := os.Open(_task.Ftp.LocalPath)
 	if err != nil {
-		Task.LogInst().WriteLog("OUTPUT_SFTP", "[FAIL] Loacal file is fail to open>> ERR = %s", err)
+		Task.LogInst().WriteLog("OUTPUT_FTP", "[FAIL][SFTP] Loacal file is fail to open>> ERR = %s", err)
+		return
 	}
 
 	bytes, err := io.Copy(dstFile, srcFile)
 	if err != nil {
-		Task.LogInst().WriteLog("OUTPUT_SFTP", "[FAIL] Upload is fail >> ERR = %s | %s => %s", err, srcFile, dstFile)
+		Task.LogInst().WriteLog("OUTPUT_FTP", "[FAIL][SFTP] Upload is fail >> ERR = %s | %s => %s", err, srcFile, dstFile)
 	} else {
-		Task.LogInst().WriteLog("OUTPUT_SFTP", "[SUCC] Upload is SUCC (bytes = %d) | %s => %s", bytes, srcFile, dstFile)
+		Task.LogInst().WriteLog("OUTPUT_FTP", "[SUCC][SFTP] Upload is SUCC (bytes = %d) | %s => %s", bytes, srcFile, dstFile)
 	}
 }

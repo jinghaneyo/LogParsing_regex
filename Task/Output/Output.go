@@ -12,6 +12,7 @@ type Output_Ftp_Config struct {
 	Pwd             string `yaml:"pwd"`
 	Port            int    `yaml:"port"`
 	Connect_timeout int    `yaml:"connect_timeout"`
+	Format          string `yaml:"format"`
 	LocalPath       string `yaml:"local"`
 	RemotePath      string `yaml:"remote"`
 }
