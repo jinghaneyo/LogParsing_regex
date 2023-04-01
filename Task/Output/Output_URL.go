@@ -25,18 +25,45 @@ func (This *Output_URL) Init() {
 
 func (This *Output_URL) DataOut(_task *Task_Output, _thread_data *[][]map[string]string) {
 
+	bulk_data := ""
+	var bulk_len uint64
 	// 자료구조 : [고루틴별][라인수별]map[태그별]실데이터
 	for thr_index := range *_thread_data {
 		for row_index := range (*_thread_data)[thr_index] {
 
-			format := _task.Url.Body.Data
+			format := _task.Url.Body.Repeat_data_value
 
 			for k, v := range (*_thread_data)[thr_index][row_index] {
 				format = strings.ReplaceAll(format, k, v)
 			}
 
-			This.Send_Data(_task, &format)
+			if bulk_len == 0 {
+				bulk_data = _task.Url.Body.Repeat_data_first + format
+
+				bulk_len += uint64(len(bulk_data))
+			} else if _task.Url.Body.Bulk_max_size < (bulk_len + uint64(len(format)+len(_task.Url.Body.Repeat_data_last))) {
+				// 설정 크기를 넘어가면 쿼리 실행
+				bulk_data += _task.Url.Body.Repeat_data_last
+				This.Send_Data(_task, &bulk_data)
+
+				// 다시 data 구문부터 구성
+				bulk_data = _task.Url.Body.Repeat_data_first + format
+
+				bulk_len = uint64(len(bulk_data))
+			} else {
+				// value 구문만 추가
+				bulk_data += ","
+				bulk_data += format
+
+				bulk_len += uint64(len(bulk_data)) + 1
+			}
 		}
+	}
+
+	// 남은 쿼리 실행
+	if len(bulk_data) > 0 {
+		bulk_data += _task.Url.Body.Repeat_data_last
+		This.Send_Data(_task, &bulk_data)
 	}
 }
 
@@ -81,7 +108,8 @@ func (This *Output_URL) Send_Data(_task *Task_Output, _data *string) bool {
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		Task.LogInst().WriteLog("OUTPUT_URL", "[FAIL] Status Code = %d >> Err = %v", resp.StatusCode, err)
+		Task.LogInst().WriteLog("OUTPUT_URL", "[FAIL] Status Code = %d >> Err = %v\n>> Data = %s",
+			resp.StatusCode, err, *_data)
 		return false
 	}
 

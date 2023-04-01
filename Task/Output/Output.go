@@ -44,8 +44,16 @@ type Output_URL_Config struct {
 	Url    string            `yaml:"url"`
 	Header map[string]string `yaml:"header"`
 	Body   struct {
-		Url_encode bool   `yaml:"url_encode"`
-		Data       string `yaml:"data"`
+		Url_encode    bool   `yaml:"url_encode"`
+		Data          string `yaml:"data"`
+		Repeat_data   string `yaml:"repeat_data"`
+		Bulk_max_size uint64 `yaml:"bulk_max_size"`
+		// 위 Data에서 Repeat_data 정규식을 통해 찾은 바로 앞 데이터
+		Repeat_data_first string
+		// 위 Data에서 Repeat_data 정규식을 통해 찾은 데이터
+		Repeat_data_value string
+		// 위 Data에서 Repeat_data 정규식을 통해 찾은 데이터 뒤 데이터
+		Repeat_data_last string
 	} `yaml:"body"`
 }
 
