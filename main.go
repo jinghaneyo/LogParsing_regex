@@ -39,40 +39,55 @@ func Load_Task() *[]Task_Confg {
 		for j := range (*task)[i].Task_Parser.Output {
 			out := &(*task)[i].Task_Parser.Output[j]
 
-			// bulk insert 가능 여부 판단
-			CanBulkInsert := make([]bool, 0)
+			if out.Type == "db" {
+				// bulk insert 가능 여부 판단
+				CanBulkInsert := make([]bool, 0)
 
-			// bulk insert 의 value 추출 구문
-			Value_sql := make([]string, 0)
-			// bulk insert 의 insert 추출 구문
-			Insert_sql := make([]string, 0)
+				// bulk insert 의 value 추출 구문
+				Value_sql := make([]string, 0)
+				// bulk insert 의 insert 추출 구문
+				Insert_sql := make([]string, 0)
 
-			for index := range out.Db.Sql.Data {
+				for index := range out.Db.Sql.Data {
 
-				out.Db.Sql.Data[index] = strings.Trim(out.Db.Sql.Data[index], " ")
+					out.Db.Sql.Data[index] = strings.Trim(out.Db.Sql.Data[index], " ")
 
-				// 마지막에 ; 있으면 제거
-				if out.Db.Sql.Data[index][len(out.Db.Sql.Data[index])-1] == ';' {
-					out.Db.Sql.Data[index] = out.Db.Sql.Data[index][0 : len(out.Db.Sql.Data[index])-1]
-				}
+					// 마지막에 ; 있으면 제거
+					if out.Db.Sql.Data[index][len(out.Db.Sql.Data[index])-1] == ';' {
+						out.Db.Sql.Data[index] = out.Db.Sql.Data[index][0 : len(out.Db.Sql.Data[index])-1]
+					}
 
-				r, _ := regexp.Compile(`(INSERT[\s]+INTO[\s]+.+)VALUES[\s]*(\(.+\))`)
-				ret := r.FindStringSubmatch(out.Db.Sql.Data[index])
-				if len(ret) > 2 {
-					if strings.EqualFold(out.Db.Sql.Data[index], "DUPLICATE KEY") == bool(false) {
-						CanBulkInsert = append(CanBulkInsert, true)
+					r, _ := regexp.Compile(`(INSERT[\s]+INTO[\s]+.+)VALUES[\s]*(\(.+\))`)
+					ret := r.FindStringSubmatch(out.Db.Sql.Data[index])
+					if len(ret) > 2 {
+						if strings.EqualFold(out.Db.Sql.Data[index], "DUPLICATE KEY") == bool(false) {
+							CanBulkInsert = append(CanBulkInsert, true)
 
-						Insert_sql = append(Value_sql, ret[1])
-						Value_sql = append(Value_sql, ret[2])
-					} else {
-						CanBulkInsert = append(CanBulkInsert, false)
+							Insert_sql = append(Value_sql, ret[1])
+							Value_sql = append(Value_sql, ret[2])
+						} else {
+							CanBulkInsert = append(CanBulkInsert, false)
+						}
 					}
 				}
-			}
 
-			out.Db.Sql.CanBulkInsert = CanBulkInsert
-			out.Db.Sql.Insert_Sql = Insert_sql
-			out.Db.Sql.Values_Sql = Value_sql
+				out.Db.Sql.CanBulkInsert = CanBulkInsert
+				out.Db.Sql.Insert_Sql = Insert_sql
+				out.Db.Sql.Values_Sql = Value_sql
+
+			} else if out.Type == "url" {
+
+				r, _ := regexp.Compile(out.Url.Body.Repeat_data)
+				ret := r.FindStringSubmatch(out.Url.Body.Data)
+				if len(ret) > 1 {
+					nStart := strings.Index(out.Url.Body.Data, ret[1])
+					nEnd := nStart + len(ret[1])
+
+					out.Url.Body.Repeat_data_first = out.Url.Body.Data[:nStart]
+					out.Url.Body.Repeat_data_value = ret[1]
+					out.Url.Body.Repeat_data_last = out.Url.Body.Data[nEnd:]
+				}
+			}
 		}
 	}
 
