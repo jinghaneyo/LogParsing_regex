@@ -1,12 +1,44 @@
 # 진행할 작업 설정(배열이므로 여러 작업 설정 가능)
 - task :
+    # input :
+    #   type : file
+    #   file :
+    #     path : "D:/01_Project/golang/src/golang/LogParsing_regex/netflow_sample.txt"
+    #     # regex > 정규식을 이용하여 추출 
+    #     # split > 한줄에 대해 특정 단어를 기준으로 자르기 
+    #     extract_type : regex
+    #     # 1_in_line > 아래 추출할 태그가 한줄에 1개만 존재할 경우 
+    #     # all_in_line > 아래 추출할 태그들이 한줄에 전부 존재할 경우 
+    #     # split > 한줄에 특정 단어를 기준으로 스플릿 처리 
+    #     tag_in_line : "1_in_line"
+    #     # 한줄에 대해 특정 단어를 기준으로 자르기 위한 단어 지정 
+    #     split_word : ","
+    #     # 파싱할 필드 지정이며, 
+    #     # 첫번째 키는 사용자 지정 이름이며(태그명), 
+    #     # 두번째 값은 찾을 정규식을 의미한다 
+    #     # 정규식에 그룹이 없으면 찾은 라인의 전체가 value, 있으면 첫번째 그룹이 value가 된다 
+    #     file_field_tag : 
+    #       "${nf:flow}" : "[ ]+Flow ([0-9]+)"
+    #       "${nf:src_ip}" : "SrcAddr: ([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)"
+    #       "${nf:dst_ip}" : "DstAddr: ([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)"
+    #       "${nf:protocol}" : "Protocol: ([\\w]+) \\([0-9]\\)"
+    #       "${nf:src_port}" : "SrcPort: ([0-9]+)"
+    #       "${nf:dst_port}" : "DstPort: ([0-9]+)"
+    #       "${nf:if_in}" : "InputInt: ([0-9]+)"
+    #       "${nf:if_out}" : "OutputInt: ([0-9]+)"
+    #       "${nf:tcp_flags}"  : "TCP Flags: (0x[0-9a-f]+)"
+    #       "${nf:bytes}" : "Octets: ([0-9]+)"
+    #       "${nf:packets}" : "Packets: ([0-9]+)"
+    #     # 한 set의 필드를 새로 구성할 시작 필드이다. 
+    #     start_tag : "${nf:flow}"
+
     input :
       type : file
       file :
-        path : "D:/01_Project/golang/src/golang/LogParsing_regex/netflow_sample.txt"
+        path : "D:/01_Project/golang/src/golang/LogParsing_regex/netflow_output.txt"
         # regex > 정규식을 이용하여 추출 
         # split > 한줄에 대해 특정 단어를 기준으로 자르기 
-        extract_type : regex
+        extract_type : split
         # 1_in_line > 아래 추출할 태그가 한줄에 1개만 존재할 경우 
         # all_in_line > 아래 추출할 태그들이 한줄에 전부 존재할 경우 
         # split > 한줄에 특정 단어를 기준으로 스플릿 처리 
@@ -15,29 +47,52 @@
         split_word : ","
         # 파싱할 필드 지정이며, 
         # 첫번째 키는 사용자 지정 이름이며(태그명), 
-        # 두번째 값은 찾을 정규식을 의미한다 
+        # extract_type이 split의 경우 두번째는 정규식이 아니라 split 했을때의 index 값이 된다 
         # 정규식에 그룹이 없으면 찾은 라인의 전체가 value, 있으면 첫번째 그룹이 value가 된다 
         file_field_tag : 
-          "${nf:flow}" : "[ ]+Flow ([0-9]+)"
-          "${nf:src_ip}" : "SrcAddr: ([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)"
-          "${nf:dst_ip}" : "DstAddr: ([0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)"
-          "${nf:protocol}" : "Protocol: ([\\w]+) \\([0-9]\\)"
-          "${nf:src_port}" : "SrcPort: ([0-9]+)"
-          "${nf:dst_port}" : "DstPort: ([0-9]+)"
-          "${nf:if_in}" : "InputInt: ([0-9]+)"
-          "${nf:if_out}" : "OutputInt: ([0-9]+)"
-          "${nf:tcp_flags}"  : "TCP Flags: (0x[0-9a-f]+)"
-          "${nf:bytes}" : "Octets: ([0-9]+)"
-          "${nf:packets}" : "Packets: ([0-9]+)"
+          "${nf:src_ip}" : "0"
+          "${nf:dst_ip}" : "1"
+          "${nf:src_port}" : "2"
+          "${nf:dst_port}" : "3"
+          "${nf:protocol}" : "4"
+          "${nf:tcp_flags}"  : "5"
+          "${nf:if_in}" : "6"
+          "${nf:if_out}" : "7"
+          "${nf:bytes}" : "8"
+          "${nf:packets}" : "9"
         # 한 set의 필드를 새로 구성할 시작 필드이다. 
-        start_tag : "${nf:flow}"
+        start_tag : ""
+
+    # input :
+    #   type : db
+    #   db :
+    #     kind : mariadb
+    #     odbc : EST_DB
+    #     database : crate.io
+    #     id : 
+    #     pwd : 
+    #     port : 5432
+    #     connect_timeout : 3
+    #     # 1m => mariadb 경우 원래는 1g 기본 설정이나 일단 테스틀 1m 만 하자 
+    #     sql :
+    #       # 데이터 쿼리를 실행하기전 실행할 쿼리(한번만 실행, 이전 단계에서 추출한 데이터를 치환하지 않는다)
+    #       # 보통 테이블 데이터를 삭제할때 사용한다 
+    #       first : ""
+    #       # input 단계에서 추출된 데이터 실행 쿼리
+    #       data :
+    #         - " INSERT INTO NMS_DB.TEST_LOG(SRC_IP, DST_IP, PROTOCOL, SRC_PORT, DST_PORT, IF_IN, IF_OUT, TCP_FLAGS, BYTES, PACKETS) 
+    #           VALUES('${nf:src_ip}', '${nf:dst_ip}', '${nf:protocol}', ${nf:src_port}, ${nf:dst_port}, ${nf:if_in}, ${nf:if_out}, ${nf:tcp_flags}, ${nf:bytes}, ${nf:packets});"
+    #       # 데이터 쿼리를 전부 실행 후 실행할 쿼리(한번만 실행, 이전 단계에서 추출한 데이터를 치환하지 않는다)
+    #       # 보통 완료 여부 플래그 업데이트 용으로 사용한다 
+    #       finish : ""
+
 
     output :
-      # - type : file
-      #   file :
-      #     path : "D:/01_Project/golang/src/golang/LogParsing_regex/netflow_output.txt"
-      #     # 저장 시 지정한 필드 형태로 라인별 저장할 포맷을 지정
-      #     format : "${nf:src_ip},${nf:dst_ip},${nf:src_port},${nf:dst_port},${nf:protocol},${nf:tcp_flags},${nf:if_in},${nf:if_out},${nf:bytes},${nf:packets},0,0"
+      - type : file
+        file :
+          path : "D:/01_Project/golang/src/golang/LogParsing_regex/netflow_output1.txt"
+          # 저장 시 지정한 필드 형태로 라인별 저장할 포맷을 지정
+          format : "${nf:src_ip},${nf:dst_ip},${nf:src_port},${nf:dst_port},${nf:protocol},${nf:tcp_flags},${nf:if_in},${nf:if_out},${nf:bytes},${nf:packets},0,0"
 
       # - type : ftp
       #   ftp :
@@ -77,15 +132,20 @@
       #       # 보통 완료 여부 플래그 업데이트 용으로 사용한다 
       #       finish : ""
 
-      - type : url
-        url :
-          tls : false
-          method : POST
-          url : "http://x.x.x.x:4200/_sql"
-          header :
-            "Content-Type" : "application/json"
-          body : 
-            # 아래 data 부분을 url 인코딩을 할것인지 여부 
-            url_encode : false
-            data : "{\"stmt\":\"INSERT INTO infraeye.flow_sflow_raw(SRC_IP, DST_IP, PROTOCOL, SRC_PORT, DST_PORT, IF_IN_INDEX, IF_OUT_INDEX, TCP_FLAGS, BYTES, PACKETS, REG_DT) 
-              VALUES('${nf:src_ip}', '${nf:dst_ip}', 1, ${nf:src_port}, ${nf:dst_port}, ${nf:if_in}, ${nf:if_out}, 1, ${nf:bytes}, ${nf:packets}, date_format('%Y-%m-%dT%H:%i:00', CURRENT_TIMESTAMP));\"}"
+      # - type : url
+      #   url :
+      #     tls : false
+      #     method : POST
+      #     url : "http://x.x.x.x:4200/_sql"
+      #     header :
+      #       "Content-Type" : "application/json"
+      #     body : 
+      #       # 아래 data 부분을 url 인코딩을 할것인지 여부 
+      #       url_encode : false
+      #       data : "{\"stmt\":\"INSERT INTO infraeye.flow_sflow_raw(SRC_IP, DST_IP, PROTOCOL, SRC_PORT, DST_PORT, IF_IN_INDEX, IF_OUT_INDEX, TCP_FLAGS, BYTES, PACKETS, REG_DT) 
+      #         VALUES('${nf:src_ip}', '${nf:dst_ip}', 1, ${nf:src_port}, ${nf:dst_port}, ${nf:if_in}, ${nf:if_out}, 1, ${nf:bytes}, ${nf:packets}, date_format('%Y-%m-%dT%H:%i:00', CURRENT_TIMESTAMP));\"}"
+      #       # 위 data 구문 중 반복 구문을 만들기 위한 부분 지정(정규식으로 그룹의 첫번째로 추출한다)
+      #       # 그룹을 지정해야 하며, 첫번째 그룹이 반복할 구문이다 
+      #       repeat_data : ".+VALUES[\\s]*(\\(.+CURRENT_TIMESTAMP\\)\\));*"
+      #       # 기본값 1m, bulk 구문을 만들기 위한 최대 data 구문 크기
+      #       bulk_max_size : 1048576

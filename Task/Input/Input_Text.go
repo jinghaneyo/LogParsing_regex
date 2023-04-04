@@ -4,6 +4,7 @@ import (
 	"LogParsing_regex/Task"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -24,7 +25,6 @@ func (This *Input_Text) Init() {
 
 func (This *Input_Text) Load(_task *Task_Input) *[][]map[string]string {
 
-	//*
 	// 파일 사이즈를 구해서 동시 진행할 스레드 수에서 작업할 바이트를 구하여 시작점과 종료점을 넘긴다
 	stat, err := os.Stat(_task.File.Path)
 	if err != nil {
@@ -45,7 +45,12 @@ func (This *Input_Text) Load(_task *Task_Input) *[][]map[string]string {
 	nStart = 0
 	for i := 0; i < ThreadCount; i++ {
 		wg.Add(1)
-		go This.Extracter(&wg, i, _task, nStart, WorkSize, &thread_data[i])
+
+		if _task.File.Extract_type == "regex" {
+			go This.Extracter(&wg, i, _task, nStart, WorkSize, &thread_data[i])
+		} else if _task.File.Extract_type == "split" {
+			go This.Split(&wg, i, _task, nStart, WorkSize, &thread_data[i])
+		}
 		nStart += WorkSize + 1
 	}
 
@@ -79,7 +84,7 @@ func (This *Input_Text) Extracter(
 	f.Seek(_nStart, 0)
 
 	// 일단 2000 읽어 들이자
-	nRead_Len := 2000
+	nRead_Len := 4000
 	if nRead_Len > int(_nSize) {
 		nRead_Len = int(_nSize)
 	}
@@ -128,7 +133,7 @@ func (This *Input_Text) Extracter(
 				nTotal_Bytes += 1 // (\n)개행도 더해준다
 			}
 
-			ret, tag, value := This.Parsing(_task, lines[i])
+			ret, tag, value := This.Parsing_Regex(_task, lines[i])
 
 			if nTotal_Bytes <= _nSize {
 
@@ -171,7 +176,7 @@ func (This *Input_Text) Extracter(
 	}
 }
 
-func (This *Input_Text) Parsing(_task *Task_Input, _line string) (bool, string, string) {
+func (This *Input_Text) Parsing_Regex(_task *Task_Input, _line string) (bool, string, string) {
 
 	for tag, reg := range _task.File.Field_tag {
 
@@ -191,4 +196,114 @@ func (This *Input_Text) Parsing(_task *Task_Input, _line string) (bool, string, 
 	}
 
 	return false, "", ""
+}
+
+func (This *Input_Text) Split(
+	_wg *sync.WaitGroup,
+	_thread_num int,
+	_task *Task_Input,
+	_nStart int64,
+	_nSize int64,
+	_dataOut *[]map[string]string) {
+
+	defer _wg.Done()
+
+	f, err := os.OpenFile(_task.File.Path, os.O_RDONLY, 644)
+	if err != nil {
+		Task.LogInst().WriteLog("INPUT", "[Extracter] ERR = %s", err)
+		return
+	}
+	defer f.Close()
+
+	data := make([]map[string]string, 0)
+	var field map[string]string
+
+	var nTotal_Bytes int64
+
+	// 파일 포인터 위치 읽어들여야할 위치로 이동
+	f.Seek(_nStart, 0)
+
+	// 일단 2000 읽어 들이자
+	nRead_Len := 4000
+	if nRead_Len > int(_nSize) {
+		nRead_Len = int(_nSize)
+	}
+
+	bFirstRead := true
+	var nRemaning int64
+	last_buf := ""
+	for {
+
+		// 고루틴 한개가 읽어들여야할 바이트 수만큼 읽어들이기 위해서
+		nRemaning = _nSize - nTotal_Bytes
+		if nRemaning < int64(nRead_Len) {
+			nRead_Len = int(nRemaning)
+		}
+		if nRead_Len < 1 {
+			nRead_Len = 4000
+		}
+
+		line_bytes := make([]byte, nRead_Len)
+		_, err := f.Read(line_bytes)
+		if err != nil {
+			*_dataOut = data
+			return
+		}
+
+		line_string := string(line_bytes)
+		lines := strings.Split(line_string, "\n")
+
+		// 한줄씩 파싱(정규식)을 한다
+		for i := range lines {
+
+			// _nStart 가 0보다 크면 라인의 첫번째 글자가 아니라 라인의 중간이란 애기이므로
+			// 이전 턴에서의 마지막 라인하고 합치자
+			if i == 0 {
+				// 다중스레드이기 때문에 스레드 번호가 0 보다 크다면 최초 한줄은 완전한 한줄이 아니라 중간이 잘린 데이터이다.
+				// 해서 첫줄은 일단 건너뛰고 다음줄 부터 정상적으로 추출하자
+				if bFirstRead == bool(true) {
+					bFirstRead = false
+					if _thread_num > 0 {
+						nTotal_Bytes += int64(len(lines[i]))
+						continue
+					}
+				}
+
+				if len(last_buf) > 0 {
+					lines[i] = last_buf + lines[i]
+				}
+			}
+
+			// 마지막 라인은 완전한 한줄이 아니므로 임시변수에 저장한 후에
+			// 다음턴 첫번째랑 합쳐서 파싱하도록 한다
+			if i == len(lines)-1 {
+				last_buf = lines[i]
+				break
+			} else {
+				nTotal_Bytes += int64(len(lines[i]))
+				nTotal_Bytes += 1 // (\n)개행도 더해준다
+			}
+
+			temp := strings.Split(lines[i], _task.File.Split_word)
+
+			field = make(map[string]string, 0)
+			for i := range temp {
+
+				for tag, val := range _task.File.Field_tag {
+
+					if val == strconv.Itoa(i) {
+						field[tag] = temp[i]
+					}
+				}
+			}
+			data = append(data, field)
+
+			if nTotal_Bytes > _nSize {
+				*_dataOut = data
+				return
+			}
+
+			time.Sleep(1 * time.Microsecond)
+		}
+	}
 }
