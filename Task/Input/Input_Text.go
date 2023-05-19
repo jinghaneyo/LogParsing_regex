@@ -33,7 +33,7 @@ func (This *Input_Text) Load(_task *Task_Input) *[][]map[string]string {
 	}
 
 	// todo 추후 10을 설정으로 빼자
-	ThreadCount := 10
+	ThreadCount := _task.Worker_count
 	WorkSize := stat.Size() / int64(ThreadCount)
 	var wg sync.WaitGroup
 
@@ -89,6 +89,10 @@ func (This *Input_Text) Extracter(
 		nRead_Len = int(_nSize)
 	}
 
+	static_field := make(map[string]string, 0)
+	bFirst_Block := true
+	bFirst_Field := true
+
 	var nRemaning int64
 	last_buf := ""
 	for {
@@ -133,15 +137,42 @@ func (This *Input_Text) Extracter(
 				nTotal_Bytes += 1 // (\n)개행도 더해준다
 			}
 
-			ret, tag, value := This.Parsing_Regex(_task, lines[i])
+			ret, tag, value, type_valiable := This.Parsing_Regex(_task, &lines[i], _thread_num)
 
 			if nTotal_Bytes <= _nSize {
-
 				if ret == bool(true) {
+
+					// 파일일 읽어들이고 블럭 시작 태그를 아직 찾지 못했다
+					// 즉, 현재 필드들은 다른 고루틴의 블럭의 필드들이다
+					if bFirst_Block == bool(true) {
+						if _task.File.Start_block_tag == tag {
+							// 블럭 시작
+							bFirst_Block = false
+						} else {
+							continue
+						}
+					}
+
 					// 필드 셋이 새로 시작
-					if _task.File.Start_tag == tag {
+					if _task.File.Start_field_tag == tag {
+
+						// 첫 블럭이 시작된 후 "시작 필드 태그" 는 아직 필드셋이 검색되지 않았으므로
+						// 건너 뛰고 다음 "시작 필드 태그" 일 경우 append를 하도록 한다
+						if bFirst_Field == bool(true) {
+							bFirst_Field = false
+							continue
+						}
+
 						// 필드 셋이 새로 시작을 하니 이전 셋은 데이터 배열에 넣도록 한다
 						if field != nil {
+
+							for k, v := range static_field {
+								_, ok := field[k]
+								if ok == bool(false) {
+									field[k] = v
+								}
+							}
+
 							data = append(data, field)
 						}
 
@@ -156,11 +187,25 @@ func (This *Input_Text) Extracter(
 			} else {
 
 				if ret == bool(true) {
-					if _task.File.Start_tag == tag {
+					if _task.File.Start_field_tag == tag {
 						if field != nil {
+
+							for k, v := range static_field {
+								_, ok := field[k]
+								if ok == bool(false) {
+									field[k] = v
+								}
+							}
+
 							data = append(data, field)
 						}
 
+						// 필드 셋을 새로 만들어주자
+						field = make(map[string]string, 0)
+					}
+
+					// 블럭 시작 태그가 있다면 이전 필드들은 종료되었으므로 더이상 읽어들이지 않는다
+					if _task.File.Start_block_tag == tag {
 						*_dataOut = data
 						return
 					}
@@ -171,31 +216,50 @@ func (This *Input_Text) Extracter(
 				}
 			}
 
-			time.Sleep(1 * time.Microsecond)
+			// 스태틱 필드값 유지
+			if type_valiable == "static" {
+				if ret == bool(true) {
+					static_field[tag] = value
+				}
+			}
+
+			// cpu 과부하 방지
+			time.Sleep(1 * time.Millisecond)
 		}
 	}
 }
 
-func (This *Input_Text) Parsing_Regex(_task *Task_Input, _line string) (bool, string, string) {
+func (This *Input_Text) Parsing_Regex(
+	_task *Task_Input,
+	_line *string,
+	_Thread_Num int) (bool, string, string, string) {
 
 	for tag, reg := range _task.File.Field_tag {
 
-		r := regexp.MustCompile(reg)
-		result := r.FindAllStringSubmatch(_line, -1)
+		// 0번째는 static(유지), local(새로 갱신)
+		// 1번째는 필터링할 정규식
+		r := regexp.MustCompile(reg[1])
+		result := r.FindAllStringSubmatch(*_line, -1)
 
 		if result != nil {
 
+			// return 1 : 존재 여부
+			// return 2 : 태그명
+			// return 3 : 정규식을 통한 필터링 값
+			// return 4 : static, local 여부
 			if len(result[0]) > 1 {
 				// 정규식에 그룹이 없으면 찾은 라인의 전체가 value, 있으면 첫번째 그룹이 value가 된다
-				return true, tag, result[0][1]
+				//Task.LogInst().WriteLog("INPUT", "[Parsing_Regex][THR %d][TAG = %s][VAL = %s][LINE = %s]", _Thread_Num, tag, result[0][1], *_line)
+				return true, tag, result[0][1], reg[0]
 			} else {
 				// 정규식에 그룹이 없으면 찾은 라인의 전체가 value, 있으면 첫번째 그룹이 value가 된다
-				return true, tag, result[0][0]
+				//Task.LogInst().WriteLog("INPUT", "[Parsing_Regex][THR %d][TAG = %s][VAL = %s][LINE = %s]", _Thread_Num, tag, result[0][0], *_line)
+				return true, tag, result[0][0], reg[0]
 			}
 		}
 	}
 
-	return false, "", ""
+	return false, "", "", ""
 }
 
 func (This *Input_Text) Split(
@@ -291,7 +355,9 @@ func (This *Input_Text) Split(
 
 				for tag, val := range _task.File.Field_tag {
 
-					if val == strconv.Itoa(i) {
+					// 0번째는 static(유지), local(새로 갱신)
+					// 1번째는 정규식
+					if val[1] == strconv.Itoa(i) {
 						field[tag] = temp[i]
 					}
 				}
